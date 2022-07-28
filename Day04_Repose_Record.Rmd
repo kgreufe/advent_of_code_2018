@@ -1,0 +1,158 @@
+---
+title: ''
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 20)
+
+library(tidyverse)
+library(lubridate)
+```
+
+# Day 04: Repose Record
+
+## Puzzle 1
+
+You've sneaked into another supply closet - this time, it's across from the prototype suit manufacturing lab. You need to sneak inside and fix the issues with the suit, but there's a guard stationed outside the lab, so this is as close as you can safely get.
+
+As you search the closet for anything that might help, you discover that you're not the first person to want to sneak in. Covering the walls, someone has spent an hour starting every midnight for the past few months secretly observing this guard post! They've been writing down the ID of the *one guard on duty that night* - the Elves seem to have decided that one guard was enough for the overnight shift - as well as when they fall asleep or wake up while at their post (your puzzle input).
+
+For example, consider the following records, which have already been organized into chronological order:
+
+```
+[1518-11-01 00:00] Guard #10 begins shift
+[1518-11-01 00:05] falls asleep
+[1518-11-01 00:25] wakes up
+[1518-11-01 00:30] falls asleep
+[1518-11-01 00:55] wakes up
+[1518-11-01 23:58] Guard #99 begins shift
+[1518-11-02 00:40] falls asleep
+[1518-11-02 00:50] wakes up
+[1518-11-03 00:05] Guard #10 begins shift
+[1518-11-03 00:24] falls asleep
+[1518-11-03 00:29] wakes up
+[1518-11-04 00:02] Guard #99 begins shift
+[1518-11-04 00:36] falls asleep
+[1518-11-04 00:46] wakes up
+[1518-11-05 00:03] Guard #99 begins shift
+[1518-11-05 00:45] falls asleep
+[1518-11-05 00:55] wakes up
+```
+
+Timestamps are written using `year-month-day hour:minute` format. The guard falling asleep or waking up is always the one whose shift most recently started. Because all asleep/awake times are during the midnight hour (`00:00 - 00:59`), only the minute portion (`00 - 59`) is relevant for those events.
+
+Visually, these records show that the guards are asleep at these times:
+
+```
+Date   ID   Minute
+000000000011111111112222222222333333333344444444445555555555
+012345678901234567890123456789012345678901234567890123456789
+11-01  #10  .....####################.....#########################.....
+11-02  #99  ........................................##########..........
+11-03  #10  ........................#####...............................
+11-04  #99  ....................................##########..............
+11-05  #99  .............................................##########.....
+```
+
+The columns are Date, which shows the month-day portion of the relevant day; ID, which shows the guard on duty that day; and Minute, which shows the minutes during which the guard was asleep within the midnight hour. (The Minute column's header shows the minute's ten's digit in the first row and the one's digit in the second row.) Awake is shown as `.`, and asleep is shown as `#`.
+
+Note that guards count as asleep on the minute they fall asleep, and they count as awake on the minute they wake up. For example, because Guard #10 wakes up at 00:25 on 1518-11-01, minute 25 is marked as awake.
+
+If you can figure out the guard most likely to be asleep at a specific time, you might be able to trick that guard into working tonight so you can have the best chance of sneaking in. You have two strategies for choosing the best guard/minute combination.
+
+*Strategy 1:* Find the guard that has the most minutes asleep. What minute does that guard spend asleep the most?
+
+In the example above, Guard #10 spent the most minutes asleep, a total of 50 minutes (20+25+5), while Guard #99 only slept for a total of 30 minutes (10+10+10). Guard #10 was asleep most during minute 24 (on two days, whereas any other minute the guard was asleep was only seen on one day).
+
+While this example listed the entries in chronological order, your entries are in the order you found them. You'll need to organize them before they can be analyzed.
+
+*What is the ID of the guard you chose multiplied by the minute you chose?* (In the above example, the answer would be 10 * 24 = 240.)
+
+
+
+```{r input}
+input_raw <- read_lines("input data/day04_input.txt")
+
+input <- 
+  input_raw %>% 
+  as_tibble() %>% 
+  separate(col = value, into = c("datetime", "action_descr"), sep = "] ") %>% 
+  mutate(datetime = str_replace(datetime, "^\\[", "")) %>% 
+  # errors in parse_number are fine here; suppressing warning output
+  {suppressWarnings(mutate(., guard = parse_number(action_descr)) )} %>% 
+  mutate(datetime = strptime(datetime, format = "%Y-%m-%d %H:%M", tz = "UTC")) %>% 
+  arrange(datetime) %>% 
+  fill(guard, .direction = "down") %>% 
+  mutate(date = as.Date(datetime), 
+         hour = lubridate::hour(datetime), 
+         time = lubridate::minute(datetime), 
+         # making asleep a 1 as we want to count that
+         action = case_when(str_detect(action_descr, "(?i)begins shift") ~ 0, 
+                            str_detect(action_descr, "(?i)wakes up") ~ 0, 
+                            str_detect(action_descr, "(?i)falls asleep") ~ 1,
+                            TRUE ~ NA_real_)
+         # shift = if_else(str_detect(action_descr, "(?i)shift"), 1, 0)
+         )
+
+# parse_number has warnings in above code that propagate through late code; 
+# warnings are that some rows don't have numbers to parse, which is expected
+#    such as "wakes up" or "falls asleep".
+# this removes them
+attributes(input$guard)$problems <- NULL
+
+
+```
+
+
+```{r puzzle1}
+combos <- 
+  crossing(date = seq.Date(from = as.Date(min(input$datetime)), 
+                           to = as.Date(max(input$datetime)),  
+                           by = 1), 
+           hour = c(0, 23), 
+           time = 0:59)
+
+
+
+puzzle_one <- 
+  combos %>% 
+  left_join(input, by = c("date", "time", "hour")) %>% 
+  select(-datetime) %>% 
+  fill(action_descr, guard, action, .direction = "down") %>% 
+    # we only care about actions during the midnight to 1 o'clock hour
+  filter(hour == 0)
+  
+  
+
+
+sleepiest_guard <- 
+  puzzle_one %>% 
+  count(guard, wt = action, sort = TRUE) %>% 
+  filter(n == max(n)) %>% 
+  pull(guard)
+
+sleepiest_minute <- 
+  puzzle_one %>% 
+  filter(guard == sleepiest_guard) %>% 
+  count(time, wt = action) %>% 
+  filter(n == max(n)) %>% 
+  pull(time)
+
+sleepiest_minute * sleepiest_guard
+
+```
+ 
+`103720` is the answer to puzzle 1
+
+
+
+
+## Puzzle 2
+
+
+```{r puzzle2}
+```
