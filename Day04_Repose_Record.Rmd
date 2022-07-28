@@ -96,7 +96,7 @@ input <-
                             str_detect(action_descr, "(?i)falls asleep") ~ 1,
                             TRUE ~ NA_real_)
          # shift = if_else(str_detect(action_descr, "(?i)shift"), 1, 0)
-         )
+  )
 
 # parse_number has warnings in above code that propagate through late code; 
 # warnings are that some rows don't have numbers to parse, which is expected
@@ -123,10 +123,10 @@ puzzle_one <-
   left_join(input, by = c("date", "time", "hour")) %>% 
   select(-datetime) %>% 
   fill(action_descr, guard, action, .direction = "down") %>% 
-    # we only care about actions during the midnight to 1 o'clock hour
+  # we only care about actions during the midnight to 1 o'clock hour
   filter(hour == 0)
-  
-  
+
+
 
 
 sleepiest_guard <- 
@@ -145,7 +145,7 @@ sleepiest_minute <-
 sleepiest_minute * sleepiest_guard
 
 ```
- 
+
 `103720` is the answer to puzzle 1
 
 
@@ -153,6 +153,19 @@ sleepiest_minute * sleepiest_guard
 
 ## Puzzle 2
 
+*Strategy 2:* Of all guards, which guard is most frequently asleep on the same minute?
+
+In the example above, Guard #99 spent minute 45 asleep more than any other guard or minute - three times in total. (In all other cases, any guard spent any minute asleep at most twice.)
+
+*What is the ID of the guard you chose multiplied by the minute you chose?* (In the above example, the answer would be 99 * 45 = 4455.)
 
 ```{r puzzle2}
+puzzle_one %>% 
+  count(guard, time, wt = action) %>% 
+  filter(n == max(n)) %>% 
+  mutate(answer = time * guard) %>% 
+  pull(answer)
+
 ```
+
+`110913` is the answer to puzzle 2
