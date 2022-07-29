@@ -60,13 +60,18 @@ combos <-
 combos_regex <- combos %>% str_c(collapse = "|")
 
 
-
-
-while(max(str_detect(puzzle_one, combos)) > 0) {
+reduce_input <- function(.string) {
   
-  puzzle_one <- str_replace_all(puzzle_one, combos_regex, "")
+  while(max(str_detect(.string, combos)) > 0) {
+    
+    .string <- str_replace_all(.string, combos_regex, "")
+    
+  }
   
+  return(.string)
 }
+
+puzzle_one <- reduce_input(puzzle_one)
 
 str_length(puzzle_one)
 
@@ -78,6 +83,43 @@ str_length(puzzle_one)
 
 ## Puzzle 2
 
+Time to improve the polymer.
+
+One of the unit types is causing problems; it's preventing the polymer from collapsing as much as it should. Your goal is to figure out which unit type is causing the most problems, remove all instances of it (regardless of polarity), fully react the remaining polymer, and measure its length.
+
+For example, again using the polymer `dabAcCaCBAcCcaDA` from above:
+
+Removing all `A/a` units produces `dbcCCBcCcD`. Fully reacting this polymer produces `dbCBcD`, which has length 6.
+Removing all `B/b` units produces `daAcCaCAcCcaDA`. Fully reacting this polymer produces `daCAcaDA`, which has length 8.
+Removing all `C/c` units produces `dabAaBAaDA`. Fully reacting this polymer produces `daDA`, which has length 4.
+Removing all `D/d` units produces `abAcCaCBAcCcaA`. Fully reacting this polymer produces `abCBAc`, which has length 6.
+
+In this example, removing all `C/c` units was best, producing the answer *4*.
+
+What is the length of the shortest polymer you can produce by removing all units of exactly one type and fully reacting the result?
+
 
 ```{r puzzle2}
+rmv_combos <- str_c(letters, "|", LETTERS)
+
+puzzle_two <- 
+  map(.x = rmv_combos, 
+      .f = ~ str_replace_all(input, .x, ""))
+
+puzzle_two_reduced <- 
+  map(.x = puzzle_two, 
+      .f = ~ reduce_input(.string = .x) )
+
+
+puzzle_two_lengths <- 
+  puzzle_two_reduced %>% 
+  map(str_length) %>% 
+  unlist() 
+
+min(puzzle_two_lengths)
+
+letters[which(puzzle_two_lengths == min(puzzle_two_lengths))]
+
 ```
+
+`5726` is the smallest amount of units we can get to be removing only one kind of unit type (s or S).
