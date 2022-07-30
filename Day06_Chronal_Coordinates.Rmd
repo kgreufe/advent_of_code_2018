@@ -96,20 +96,20 @@ input <- mutate(input, label = labels, .before = x)
 
 
 ```{r puzzle1}
-buffer <- max(input$x, input$y) %/% 2
+buffer_one <- max(input$x, input$y) %/% 2
 
-grid <- matrix(rep("", (buffer * 4) ^ 2 ), nrow = buffer * 4)
+grid_one <- matrix(rep("", (buffer_one * 4) ^ 2 ), nrow = buffer_one * 4)
 
 puzzle_one <- 
   input %>% 
-  mutate(xbuf = x + buffer, 
-         ybuf = y + buffer)
+  mutate(xbuf = x + buffer_one, 
+         ybuf = y + buffer_one)
 
 puzone_process <- function(.x, .y, .df = puzzle_one) {
   
-  .mandist <- abs(puzzle_one$xbuf - .x) + abs(puzzle_one$ybuf - .y)
+  .mandists <- abs(puzzle_one$xbuf - .x) + abs(puzzle_one$ybuf - .y)
   
-  .nvals <- which(.mandist == min(.mandist))
+  .nvals <- which(.mandists == min(.mandists))
   
   if (length(.nvals) > 1) {
     return(".")
@@ -121,9 +121,9 @@ puzone_process <- function(.x, .y, .df = puzzle_one) {
 }
 
 
-for (i in 1:ncol(grid)) {
-  for (j in 1:nrow(grid)) {
-    grid[j, i] <- puzone_process(.x = i, .y = j)
+for (i in 1:ncol(grid_one)) {
+  for (j in 1:nrow(grid_one)) {
+    grid_one[j, i] <- puzone_process(.x = i, .y = j)
   }
 }
 
@@ -131,13 +131,14 @@ for (i in 1:ncol(grid)) {
 #    need to remove those values as possibilities
 
 infvalues <- 
-  c(grid[1, ], 
-  grid[nrow(grid), ], 
-  grid[, 1], 
-  grid[, ncol(grid)] ) %>% 
+  c(
+    grid_one[1, ], 
+    grid_one[nrow(grid_one), ], 
+    grid_one[, 1], 
+    grid_one[, ncol(grid_one)] ) %>% 
   unique()
 
-tibble(val = c(grid)) %>% 
+tibble(val = c(grid_one)) %>% 
   count(val) %>% 
   filter(val != ".", 
          !(val %in% infvalues)) %>% 
@@ -150,6 +151,72 @@ The size of the largest area that is not infinite is `3647`
 
 ## Puzzle 2
 
+On the other hand, *if the coordinates are safe*, maybe the best you can do is try to find a *region* near as many coordinates as possible.
+
+For example, suppose you want the sum of the Manhattan distance to all of the coordinates to be *less than 32*. For each location, add up the distances to all of the given coordinates; if the total of those distances is less than 32, that location is within the desired region. Using the same coordinates as above, the resulting region looks like this:
+
+```
+..........
+.A........
+..........
+...###..C.
+..#D###...
+..###E#...
+.B.###....
+..........
+..........
+........F.
+```
+
+In particular, consider the highlighted location 4,3 located at the top middle of the region. Its calculation is as follows, where abs() is the absolute value function:
+
+- Distance to coordinate A: `abs(4-1) + abs(3-1) =  5`
+- Distance to coordinate B: `abs(4-1) + abs(3-6) =  6`
+- Distance to coordinate C: `abs(4-8) + abs(3-3) =  4`
+- Distance to coordinate D: `abs(4-3) + abs(3-4) =  2`
+- Distance to coordinate E: `abs(4-5) + abs(3-5) =  3`
+- Distance to coordinate F: `abs(4-8) + abs(3-9) = 10`
+- Total distance: `5 + 6 + 4 + 2 + 3 + 10 = 30`
+
+Because the total distance to all coordinates (`30`) is less than 32, the location is *within* the region.
+
+This region, which also includes coordinates `D` and `E`, has a total size of `16`.
+
+Your actual region will need to be much larger than this example, though, instead including all locations with a total distance of less than `10000`.
+
+*What is the size of the region containing all locations which have a total distance to all given coordinates of less than 10000?*
+
 
 ```{r puzzle2}
+buffer_two <- ceiling(10000 / 2)
+
+grid_two <- matrix(rep(NA_integer_, (buffer_two * 4) ^ 2 ), nrow = buffer_two * 4)
+
+puzzle_two <- 
+  input %>% 
+  mutate(xbuf = x + buffer_two, 
+         ybuf = y + buffer_two)
+
+
+puztwo_process <- function(.x, .y, .df = puzzle_two) {
+  
+  .mandists <- abs(puzzle_two$xbuf - .x) + abs(puzzle_two$ybuf - .y)
+  
+  if (sum(.mandists) < 10000L) { return(1L) } else { return (0L) }
+  
+}
+
+# not efficient, but gets the right answer!
+
+for (i in 1:ncol(grid_two)) {
+  
+  for (j in 1:nrow(grid_two)) {
+    grid_two[j, i] <- puztwo_process(.x = i, .y = j)
+  }
+}
+
+
+sum(grid_two) 
 ```
+
+`41605` units for puzzle two
