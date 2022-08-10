@@ -24,3 +24,6 @@
 #   filter(attached == TRUE) %>%
 #   select(package, loadedversion) %>%
 #   knitr::kable() 
+
+# Updated R to version 4.2.1 in August 2022.  This new version comes with improvements to the base R pipe |>
+# Switched to native base R pipe on Day 07 
