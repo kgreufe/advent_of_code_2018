@@ -14,19 +14,138 @@ library(tidyverse)
 
 # Day 07: The Sum of Its Parts
 
+You find yourself standing on a snow-covered coastline; apparently, you landed a little off course. The region is too hilly to see the North Pole from here, but you do spot some Elves that seem to be trying to unpack something that washed ashore. It's quite cold out, so you decide to risk creating a paradox by asking them for directions.
+
+"Oh, are you the search party?" Somehow, you can understand whatever Elves from the year 1018 speak; you assume it's Ancient Nordic Elvish. Could the device on your wrist also be a translator? "Those clothes don't look very warm; take this." They hand you a heavy coat.
+
+"We do need to find our way back to the North Pole, but we have higher priorities at the moment. You see, believe it or not, this box contains something that will solve all of Santa's transportation problems - at least, that's what it looks like from the pictures in the instructions." It doesn't seem like they can read whatever language it's in, but you can: "Sleigh kit. Some assembly required."
+
+"'Sleigh'? What a wonderful name! You must help us assemble this 'sleigh' at once!" They start excitedly pulling more parts out of the box.
+
+The instructions specify a series of *steps* and requirements about which steps must be finished before others can begin (your puzzle input). Each step is designated by a single letter. For example, suppose you have the following instructions:
+
+```
+Step C must be finished before step A can begin.
+Step C must be finished before step F can begin.
+Step A must be finished before step B can begin.
+Step A must be finished before step D can begin.
+Step B must be finished before step E can begin.
+Step D must be finished before step E can begin.
+Step F must be finished before step E can begin.
+```
+
+Visually, these requirements look like this:
+
+```
+-->A--->B--
+/    \      \
+C      -->D----->E
+\           /
+---->F-----
+```
+
+Your first goal is to determine the order in which the steps should be completed. If more than one step is ready, choose the step which is first alphabetically. In this example, the steps would be completed as follows:
+
+- Only C is available, and so it is done first.
+- Next, both A and F are available. A is first alphabetically, so it is done next.
+- Then, even though F was available earlier, steps B and D are now also available, and B is the first alphabetically of the three.
+- After that, only D and F are available. E is not available because only some of its prerequisites are complete. Therefore, D is completed next.
+- F is the only choice, so it is done next.
+- Finally, E is completed.
+
+So, in this example, the correct order is `CABDFE`.
+
+*In what order should the steps in your instructions be completed?*
 
 ## Puzzle 1
 
 
 ```{r input}
+test_raw <- read_lines(
+  "Step C must be finished before step A can begin.
+Step C must be finished before step F can begin.
+Step A must be finished before step B can begin.
+Step A must be finished before step D can begin.
+Step B must be finished before step E can begin.
+Step D must be finished before step E can begin.
+Step F must be finished before step E can begin.")
+
+input_raw <- read_lines("input data/day07_input.txt")
+
+prep_data <- function(.df) {
+  .df |> 
+    tibble(value = _) |> 
+    separate(col = value, 
+             into = c("depends", "step"), 
+             sep = "(?i) must be finished before step ") |> 
+    mutate(depends = str_replace(depends, "(?i)step ", ""), 
+           step = str_replace(step, "(?i) can begin\\.", "")) |> 
+    relocate(step) 
+}
+
+test <- prep_data(test_raw)
+input <- prep_data(input_raw)
+
 ```
 
 
 ```{r puzzle1}
+# change puz1 to test or input depending on which data we want to work with
+puz1 <- input
+
+puz1_result <- vector("character", length = 0)
+
+puz1_unique <- sort(unique(c(puz1$step, puz1$depends)))
+
+# "ZZ" will be set to complete and the "initial" step for those steps that don't have a
+# dependency in the input
+puz1_complete <- vector("integer", length(puz1_unique) + 1)
+
+names(puz1_complete) <- c(puz1_unique, "ZZ")
+
+puz1_complete["ZZ"] <- 1L
+
+
+# figure out which steps has no dependencies and set it as depending on "ZZ"
+# `setdiff` is asymmetric difference, which we want -- those values in x that aren't in y
+no_depends <- sort(setdiff(unique(puz1$depends), unique(puz1$step) ))
+
+puz1 <- 
+  puz1 |> 
+  add_row(step = no_depends, 
+          depends = rep("ZZ", length(no_depends)))
+
+
+to_complete <- names(puz1_complete[puz1_complete == 0L])
+
+while (length(to_complete) > 0L) {
+  
+  completed <- names(puz1_complete[puz1_complete == 1L])
+  
+  ready_to_complete <- 
+    puz1 |> 
+    mutate(tf = if_else(depends %in% completed, TRUE, FALSE)) |> 
+    group_by(step) |> 
+    summarize(tf = min(tf)) |> 
+    filter(tf == 1L) |> 
+    pull(step)
+  
+  step_complete <- sort(intersect(ready_to_complete, to_complete))[[1]]
+  
+  puz1_result <- str_c(puz1_result, step_complete)
+  
+  puz1_complete[step_complete] <- 1L
+  
+  to_complete <- names(puz1_complete[puz1_complete == 0L])
+  
+}
+
+puz1_result
+
 ```
 
 
-
+The order for Step 1 is `CQSWKZFJONPBEUMXADLYIGVRHT`
 
 
 ## Puzzle 2
