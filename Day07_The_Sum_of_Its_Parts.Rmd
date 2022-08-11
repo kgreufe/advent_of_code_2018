@@ -150,6 +150,152 @@ The order for Step 1 is `CQSWKZFJONPBEUMXADLYIGVRHT`
 
 ## Puzzle 2
 
+As you're about to begin construction, four of the Elves offer to help. "The sun will set soon; it'll go faster if we work together." Now, you need to account for multiple people working on steps simultaneously. If multiple steps are available, workers should still begin them in alphabetical order.
+
+Each step takes 60 seconds plus an amount corresponding to its letter: A=1, B=2, C=3, and so on. So, step A takes 60+1=61 seconds, while step Z takes 60+26=86 seconds. No time is required between steps.
+
+To simplify things for the example, however, suppose you only have help from one Elf (a total of two workers) and that each step takes 60 fewer seconds (so that step A takes 1 second and step Z takes 26 seconds). Then, using the same instructions as above, this is how each second would be spent:
+
+```
+Second   Worker 1   Worker 2   Done
+------   --------   --------   ----
+00       C          .           
+01       C          .           
+02       C          .           
+03       A          F          C
+04       B          F          CA
+05       B          F          CA
+06       D          F          CAB
+07       D          F          CAB
+08       D          F          CAB
+09       D          .          CABF
+10       E          .          CABFD
+11       E          .          CABFD
+12       E          .          CABFD
+13       E          .          CABFD
+14       E          .          CABFD
+15       .          .          CABFDE
+```
+
+
+Each row represents one second of time. The Second column identifies how many seconds have passed as of the beginning of that second. Each worker column shows the step that worker is currently doing (or . if they are idle). The Done column shows completed steps.
+
+Note that the order of the steps has changed; this is because steps now take time to finish and multiple workers can begin multiple steps simultaneously.
+
+In this example, it would take 15 seconds for two workers to complete these steps.
+
+*With 5 workers and the 60+ second step durations described above, how long will it take to complete all of the steps?*
+
 
 ```{r puzzle2}
+puz2_test <- FALSE
+
+puz2 <- if(puz2_test) {test} else {input}
+
+puz2_result <- vector("character", length = 0)
+
+puz2_unique <- sort(unique(c(puz2$step, puz2$depends)))
+
+# "ZZ" will be set to complete and the "initial" step for those steps that don't have a
+# dependency in the input
+puz2_complete <- vector("integer", length(puz2_unique) + 1)
+
+names(puz2_complete) <- c(puz2_unique, "ZZ")
+
+puz2_complete["ZZ"] <- 1L
+
+
+# figure out which steps has no dependencies and set it as depending on "ZZ"
+# `setdiff` is asymmetric difference, which we want -- those values in x that aren't in y
+no_depends_two <- sort(setdiff(unique(puz2$depends), unique(puz2$step) ))
+
+puz2 <- 
+  puz2 |> 
+  add_row(step = no_depends_two, 
+          depends = rep("ZZ", length(no_depends_two)))
+
+
+step_length <- function(.l) { which(.l == LETTERS) + if_else(puz2_test, 0L, 60L) -1}
+
+
+nworkers <- if_else(puz2_test, 2L, 5L)
+
+workers_end <- vector("integer", length = nworkers)
+names(workers_end) <- letters[1:nworkers]
+
+workers_assigned <- vector("character", length = nworkers)
+names(workers_assigned) <- letters[1:nworkers]
+
+
+to_complete_two <- names(puz2_complete[puz2_complete == 0L])
+
+
+
+i <- 0L
+
+while (length(to_complete_two) > 0L) {
+  
+  completed <- names(puz2_complete[puz2_complete == 1L])
+  
+  ready_to_complete <- 
+    puz2 |> 
+    mutate(tf = if_else(depends %in% completed, TRUE, FALSE)) |> 
+    group_by(step) |> 
+    summarize(tf = min(tf)) |> 
+    filter(tf == 1L) |> 
+    pull(step)
+  
+  steps_available <- sort(intersect(ready_to_complete, to_complete_two))
+  
+  steps_available <- steps_available[!(steps_available %in% workers_assigned)]
+  
+  workers_available <- which(workers_end == 0L)
+  
+  for ( j in seq_along(workers_available) ) {
+    
+    if ( is.na(steps_available[j]) ) {
+      
+      next
+      
+    } else {
+      
+      workers_assigned[names(workers_available[j])] <- steps_available[j]
+      
+      workers_end[names(workers_available[j])] <- step_length(steps_available[j]) + i
+      
+    }
+    
+  }
+  
+  
+  workers_done <- which(workers_end == i)
+ 
+  if ( length(workers_done) > 0 ) {
+    
+    for ( k in seq_along(workers_done) ) {
+      
+      work_ind <- names(workers_done[k])
+      
+      puz2_result <- str_c(puz2_result, workers_assigned[work_ind])
+      
+      puz2_complete[workers_assigned[work_ind]] <- 1L
+      
+      workers_assigned[work_ind] <- ""
+      
+      workers_end[work_ind] <- 0L
+      
+    }
+    
+  }
+  
+  to_complete_two <- names(puz2_complete[puz2_complete == 0L])
+  
+  i <- i + 1L
+}
+
+
+i
+
 ```
+
+With 5 workers, it takes `914` seconds to complete the work. 
