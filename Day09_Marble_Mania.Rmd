@@ -94,9 +94,142 @@ test6 <- "30 players; last marble is worth 5807 points" |> parse_input()
 
 
 ```{r puzzle1}
+puz1 <- input
+
+marbles_master <- rep(NA_integer_, puz1[[2]])
+
+n_players <- puz1[[1]]
+
+ball_value <- 0L
+current_marble <- 1L
+player <- 0L
+player_scores <- vector("integer", length = n_players)
+
+
+
+prep_next <- 
+  function(.n = n_players, 
+           .player = player, 
+           .bv = ball_value
+  ) {
+    
+    ball_value <<- .bv + 1L
+    
+    .p <- (.player + 1L) %% .n
+    player <<- if_else(.p == 0L, .n, .p)
+    
+  }
+
+
+
+place_marble <- 
+  function(.m = marbles, 
+           .cm = current_marble, 
+           .bv = ball_value, 
+           .p = player, 
+           .pscores = player_scores
+  ) {
+    
+    # process for if a marble is divisible by 23...
+    if (.bv %% 23L == 0L) {
+      
+      # figure out second marble to add to score
+      .other_index <- .cm - 7
+      .other_index <- if_else(.other_index < 1L,  
+                              length(.m) + .other_index, 
+                              .other_index)
+      
+      player_scores[[.p]] <<- .pscores[[.p]] + .bv + .m[[.other_index]]
+      
+      if (.other_index == 1L) {
+        .mm <- c(.m[2:length(.m)], 
+                 NA_integer_) # need a NA to replace the one we've removed
+        
+      } else {
+        .mm <- c(.m[1:(.other_index - 1L)], 
+                 .m[(.other_index + 1L):length(.m)], 
+                 NA_integer_)
+        
+      }
+      
+      marbles_master[1:length(.mm)] <<- .mm
+      current_marble <<- .other_index
+      
+      
+      
+    # process for every other marble than those divisible by 23
+    } else {
+      
+      if (.cm == length(.m) ) {
+        place <- 2L
+        
+      } else {
+        place <- .cm + 2L
+        
+      }
+      
+      
+      if (place == length(.m) + 1L) {
+        .mm <- c(.m, .bv) 
+        
+      } else {
+        .mm <- c(.m[1:(place - 1)], .bv, .m[place:length(.m)] )
+        
+      }
+      
+      
+      marbles_master[1:length(.mm)] <<- .mm
+      current_marble <<- place
+    }
+    
+  } # end place_marble() function
+
+
+
+
+
+while (ball_value <= puz1[[2]]) {
+  
+  marbles <- marbles_master[!is.na(marbles_master)]
+  
+  if (length(marbles) == 0L) {
+    
+    marbles_master[1] <- ball_value
+    
+    current_marble <- 1L
+    
+    prep_next()
+    
+    next
+  }
+  
+  if (length(marbles) == 1L) {
+    
+    marbles_master[2] <- ball_value
+    
+    current_marble <- 2L
+    
+    prep_next()
+    
+    next
+  }
+  
+  
+  place_marble()
+  
+  prep_next()
+  
+  # print(ball_value)
+  
+}
+
+
+max(player_scores)
+
+
 ```
 
-
+`388844` is the score of the winning player
 
 
 
