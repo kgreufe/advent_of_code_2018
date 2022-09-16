@@ -173,15 +173,116 @@ After 3 seconds, the message appeared briefly: HI. Of course, your message will 
 
 
 ```{r input}
+parse_input <- function(.df) {
+  .df |> 
+    tibble(raw = _) |> 
+    mutate(simple = str_replace(raw, pattern = "(?i)> velocity", "xxx")) |> 
+    mutate(simple = str_replace_all(simple, 
+                                    pattern = "(?i)position|=|<|>", 
+                                    replacement = "") ) |> 
+    separate(simple, into = c("position", "velocity"), sep = "xxx") |> 
+    separate(position, into = c("px", "py"), sep = ",") |> 
+    separate(velocity, into = c("vx", "vy"), sep = ",") |> 
+    select(-raw) |> 
+    mutate(across(.fns = as.integer)) 
+}
 
+test <-
+  read_lines("input data/day10_test_data.txt") |> 
+  parse_input()
+
+input <- 
+  read_lines("input data/day10_input.txt") |> 
+  parse_input()
 ```
 
 
 ```{r puzzle1}
+puz1 <- input
+
+# function to figure out parameters of box (range of x values + range of y values)
+#   assumption is the step with the smallest box size will contain the message
+box_size <- function(.df) { sum(abs(range(.df$px))) + sum(abs(range(.df$py))) }
+diffrange <- function(.v) diff(range(.v))
+
+# process the velocity to the position of each value for each step
+run_step <- function(.df, ...) {
+  .df |> 
+    mutate(px = px + vx, 
+           py = py + vy)
+}
+
+
+
+
+bs <- diffrange(puz1$py)
+bs_new <- bs - 1
+df <- puz1
+
+repeat {
+  
+  df_new <- run_step(df)
+  bs_new <- diffrange(df_new$py)
+  
+  if (bs_new >= bs) break
+  
+  bs <- bs_new
+  df <- df_new
+  
+}
+
+# figure out light locations
+lights <- 
+  df |> 
+  select(px, py) |> 
+  # adjust light locations to all be positive integers
+  mutate(px = px + abs(min(px) + 2), 
+         py = py + abs(min(py)) + 2) |> 
+  select(py, px)
+
+
+dimcalc <- max(max(lights$px), max(lights$py))
+
+# lights will have "X", otherwise "_"
+lightplot <- 
+  matrix(data = "_", 
+         nrow = dimcalc, 
+         ncol = dimcalc)
+
+lightplot[as.matrix(lights)] <- "X"
+
+
+# reduce light plot dimensions
+has_rows <- 
+  map_int(.x = seq_len(dimcalc), 
+          .f = ~ max(lightplot[.x, ] == "X") )
+
+range_rows <- range(which(has_rows == 1))
+
+has_cols <- 
+  map_int(.x = seq_len(dimcalc), 
+          .f = ~ max(lightplot[, .x] == "X") )
+
+range_cols <- range(which(has_cols == 1))
+
+lightplot <- lightplot[range_rows[[1]]:range_rows[[2]], 
+                       range_cols[[1]]:range_cols[[2]]]
+
+lightplot[which(lightplot == "_", arr.ind = TRUE)] <- "\U2B1B"
+lightplot[which(lightplot == "X", arr.ind = TRUE)] <- "\U2B1C"
+
+
+lightplot |> 
+  cbind(matrix("\n", nrow = nrow(lightplot)), ... = _) |> 
+  t() |> 
+  as.character() |> 
+  cat()
+  
 ```
 
+`PLBPGFRR` is the message that appears
 
-
+![picture of day10 puzzle1 solution](images/day10_puzzle1_solution.jpg)
 
 
 ## Puzzle 2
