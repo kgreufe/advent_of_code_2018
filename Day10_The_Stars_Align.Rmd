@@ -218,6 +218,7 @@ run_step <- function(.df, ...) {
 bs <- diffrange(puz1$py)
 bs_new <- bs - 1
 df <- puz1
+i <- 0L
 
 repeat {
   
@@ -228,6 +229,7 @@ repeat {
   
   bs <- bs_new
   df <- df_new
+  i <- i + 1L
   
 }
 
@@ -287,6 +289,13 @@ lightplot |>
 
 ## Puzzle 2
 
+Good thing you didn't have to wait, because that would have taken a long time - much longer than the 3 seconds in the example above.
+
+Impressed by your sub-hour communication capabilities, the Elves are curious: *exactly how many seconds would they have needed to wait for that message to appear?*
+
 
 ```{r puzzle2}
+i
 ```
+
+It takes `10519` seconds for that message to appear (2.92 hours; ~ 2 hours 55 minutes)
