@@ -270,8 +270,8 @@ range_cols <- range(which(has_cols == 1))
 lightplot <- lightplot[range_rows[[1]]:range_rows[[2]], 
                        range_cols[[1]]:range_cols[[2]]]
 
-lightplot[which(lightplot == "_", arr.ind = TRUE)] <- "\U2B1B"
-lightplot[which(lightplot == "X", arr.ind = TRUE)] <- "\U2B1C"
+lightplot[which(lightplot == "_", arr.ind = TRUE)] <- "\U2B1B" # unicode white box
+lightplot[which(lightplot == "X", arr.ind = TRUE)] <- "\U2B1C" # unicode black box
 
 
 lightplot |> 
