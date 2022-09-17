@@ -137,8 +137,99 @@ which(power == max_power, arr.ind = TRUE)
 
 The `X,Y` coordinate of the cell with the largest 3x3 grid value is `235,20` |> 
 
+
+
 ## Puzzle 2
 
+You discover a dial on the side of the device; it seems to let you select a square of *any size*, not just 3x3. Sizes from 1x1 to 300x300 are supported.
+
+Realizing this, you now must find the *square of any size with the largest total power*. Identify this square by including its size as a third parameter after the top-left coordinate: a `9x9` square with a top-left corner of `3,5` is identified as `3,5,9`.
+
+For example:
+
+- For grid serial number `18`, the largest total square (with a total power of `113`) is `16x16` and has a top-left corner of `90,269`, so its identifier is `90,269,16`.
+
+- For grid serial number `42`, the largest total square (with a total power of `119`) is `12x12` and has a top-left corner of `232,251`, so its identifier is `232,251,12`.
+
+*What is the X,Y,size identifier of the square with the largest total power?*
 
 ```{r puzzle2}
+n <- 300
+
+# build base matrix for cell values
+cells <- matrix(rep(NA_integer_, n ** 2), 
+                nrow = n)
+
+power <- cells
+
+# check if cell is valid for any box size analysis 
+valid_square <- function(.y, .x, .size) {
+  (.y <= 300 - (.size - 1)) && (.x <= 300 - (.size - 1))
+}
+
+# process each cells power level
+calc_cell_power <- function(.y, .x, .in = input) {
+  .rid <- .x + 10
+  .pl <- ((.rid * .y) + .in) * .rid
+  if (.pl >= 100) {
+    .pl <- trunc(.pl / 100) %% 10
+  } else {
+    .pl <- 0
+  }
+  
+  return(.pl - 5)
+}
+
+# figure out 3x3 total power level
+calc_box_power <- function(.y, .x, .size, .m = cells) {
+  if (valid_square(.y, .x, .size)) {
+    .m[.y:(.y + (.size - 1)), .x:(.x + (.size - 1))] |> sum()
+  } else {
+    NA_integer_
+  }
+}
+
+# loop to calc each cells value
+for (i in seq_len(n)) {
+  for (j in seq_len(n)) {
+    cells[i, j] <- calc_cell_power(i, j)
+  }
+}
+
+# loop to calc each grids power total
+calc_grid <- function(.m, .s, .n = n) {
+  print(.s)
+  for (i in seq_len(.n)) {
+    for (j in seq_len(.n)) {
+      .m[i, j] <- calc_box_power(.y = i, .x = j, .size = .s, .m = cells)
+    }
+  }
+  
+  return(.m)
+}
+
+
+puzzle2 <- 
+  map(.x = 1:300, 
+      .f = ~ as.matrix(power))
+
+for (k in seq_along(puzzle2)) {
+  puzzle2[[k]] <- calc_grid(.m = power, .s = k, .n = n)
+}
+
+
+max_values <- 
+  map(.x = puzzle2, 
+      .f = ~ max(.x, na.rm = TRUE )) |> 
+  unlist()
+
+square_size <- which(max_values == max(max_values))
+
+
+row_col <- which(puzzle2[[square_size]] == max(max_values), arr.ind = TRUE)
+
+str_c(row_col[[2]], row_col[[1]], square_size, sep = ",")
+
 ```
+
+The `X,Y,size` value for puzzle 2 is `237,223,14`
