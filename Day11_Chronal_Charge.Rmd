@@ -76,15 +76,66 @@ For grid serial number `42`, the largest 3x3 square's top-left is `21,61` (with 
 
 
 ```{r input}
+input <- read_lines(file = "input data/day11_input.txt") |> as.integer()
 ```
 
 
 ```{r puzzle1}
+n <- 300
+
+# build base matrix for cell values
+cells <- matrix(rep(NA_integer_, n ** 2), 
+                nrow = n)
+
+power <- cells
+
+# check if cell is valid for 3x3 analysis 
+valid_square <- function(.y, .x, .n = n) {
+  (.y <= .n - 2) && (.x <= .n - 2)
+}
+
+# process each cells power level
+calc_cell_power <- function(.y, .x, .in = input) {
+  .rid <- .x + 10
+  .pl <- ((.rid * .y) + .in) * .rid
+  if (.pl >= 100) {
+    .pl <- trunc(.pl / 100) %% 10
+  } else {
+    .pl <- 0
+  }
+  
+  return(.pl - 5)
+}
+
+# figure out 3x3 total power level
+calc_box_power <- function(.y, .x, .m = cells) {
+  if (valid_square(.y, .x)) {
+    .m[.y:(.y + 2), .x:(.x + 2)] |> sum()
+  } else {
+    NA_integer_
+  }
+}
+
+# loop to calc each cells value
+for (i in seq_len(n)) {
+  for (j in seq_len(n)) {
+    cells[i, j] <- calc_cell_power(i, j)
+  }
+}
+
+# loop to calc each grids power total
+for (i in seq_len(n)) {
+  for (j in seq_len(n)) {
+    power[i, j] <- calc_box_power(i, j)
+  }
+}
+
+max_power <- max(power, na.rm = TRUE)
+
+which(power == max_power, arr.ind = TRUE) 
 ```
 
-
-
-
+The `X,Y` coordinate of the cell with the largest 3x3 grid value is `235,20` |> 
 
 ## Puzzle 2
 
