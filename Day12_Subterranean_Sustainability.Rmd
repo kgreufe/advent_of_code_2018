@@ -56,18 +56,18 @@ initial state: #..#.#..##......###...###
 For brevity, in this example, only the combinations which do produce a plant are listed. (Your input includes all possible combinations.) Then, the next 20 generations will look like this:
 
 ```
-                 1         2         3     
-       0         0         0         0     
- 0: ...#..#.#..##......###...###...........
- 1: ...#...#....#.....#..#..#..#...........
- 2: ...##..##...##....#..#..#..##..........
- 3: ..#.#...#..#.#....#..#..#...#..........
- 4: ...#.#..#...#.#...#..#..##..##.........
- 5: ....#...##...#.#..#..#...#...#.........
- 6: ....##.#.#....#...#..##..##..##........
- 7: ...#..###.#...##..#...#...#...#........
- 8: ...#....##.#.#.#..##..##..##..##.......
- 9: ...##..#..#####....#...#...#...#.......
+1         2         3     
+0         0         0         0     
+0: ...#..#.#..##......###...###...........
+1: ...#...#....#.....#..#..#..#...........
+2: ...##..##...##....#..#..#..##..........
+3: ..#.#...#..#.#....#..#..#...#..........
+4: ...#.#..#...#.#...#..#..##..##.........
+5: ....#...##...#.#..#..#...#...#.........
+6: ....##.#.#....#...#..##..##..##........
+7: ...#..###.#...##..#...#...#...#........
+8: ...#....##.#.#.#..##..##..##..##.......
+9: ...##..#..#####....#...#...#...#.......
 10: ..#.#..#...#.##....##..##..##..##......
 11: ...#...##...#.#...#.#...#...#...#......
 12: ...##.#.#....#.#...#.#..##..##..##.....
@@ -91,12 +91,82 @@ In this example, after 20 generations, the pots shown as # contain plants, the f
 
 
 ```{r input}
+input <- read_lines(file = "input data/day12_input.txt")
+
+initial_state <- input[[1]]
+input <- input[-1]
+
+initial_state <- 
+  initial_state |> 
+  str_replace("(?i)initial state: ", "") |> 
+  str_split("") |> 
+  pluck(1)
+
+rules <- 
+  tibble(raw = input) |> 
+  filter(str_length(raw) > 0) |> 
+  separate(col = raw, into = c("pattern", "result"), sep = "(?i) => ") |> 
+  mutate(pattern = str_split(pattern, "")) |> 
+  mutate(pattern = map_chr(.x = pattern, .f = ~ str_c(.x, collapse = "")))
+
 ```
 
 
 ```{r puzzle1}
+# puzzle 1 is to run 20 iterations
+# plants shouldn't be able to move more than 20 to the left or right, so padding our input accordingly 
+n <- 20
+pad_int <- 2
+pad_rep <- rep(".", n + pad_int)
+
+
+puzone <- c(pad_rep, initial_state, pad_rep)
+potvals <- (-(n + pad_int)):(length(puzone) - (n + pad_int + 1)) 
+# adding 1 to account for zero value
+
+
+get_pattern <- function(.i, .p = puzone) {
+  .p[(.i - 2):(.i + 2)] |> 
+    str_c(collapse = "")
+}
+
+get_value <- function(.pat, .r = rules) {
+  .r |> 
+    filter(pattern == .pat) |> 
+    pull("result")
+}
+
+run_step <- function(.p = puzone, .rules = rules, ...) {
+  
+  exclude <- c(1:2, (length(.p) - 1):(length(.p)) )
+  
+  .new <- rep(".", length(.p))
+  
+  for (i in seq_along(.p)) {
+    
+    if (i %in% exclude) {
+      
+      next
+      
+    } else {
+      
+      .new[i] <- get_value(.pat = get_pattern(.i = i, .p = .p), 
+                           .r = .rules)
+    }
+  }
+  
+  puzone <<- .new
+}
+
+reduce(.x = 1:n, 
+       .f = ~ run_step(... = .x), 
+       .init = puzone)
+
+potvals[which(puzone == "#")] |> sum()
+
 ```
 
+After 20 iterations, the sum of the values of the pots that contain a plant is `3248`
 
 
 
