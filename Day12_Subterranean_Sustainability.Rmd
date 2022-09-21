@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 options(scipen = 20)
 
 library(tidyverse)
+library(slider)
 ```
 
 # Day 12: Subterranean Sustainability
@@ -112,57 +113,45 @@ rules <-
 ```
 
 
-```{r puzzle1}
-# puzzle 1 is to run 20 iterations
-# plants shouldn't be able to move more than 20 to the left or right, so padding our input accordingly 
-n <- 20
-pad_int <- 2
-pad_rep <- rep(".", n + pad_int)
+```{r puzzle1 attempt 2}
+n <- 20L
 
-
-puzone <- c(pad_rep, initial_state, pad_rep)
-potvals <- (-(n + pad_int)):(length(puzone) - (n + pad_int + 1)) 
-# adding 1 to account for zero value
-
-
-get_pattern <- function(.i, .p = puzone) {
-  .p[(.i - 2):(.i + 2)] |> 
-    str_c(collapse = "")
+set_up_pots <- function(.n) {
+  
+  pots_fill <- rep(".", .n + 2L)
+  pots_fill_length <- length(pots_fill)
+  
+  pots <<- c(pots_fill, initial_state, pots_fill)
+  potvals <<- (-pots_fill_length):(length(initial_state) + pots_fill_length - 1)
 }
 
-get_value <- function(.pat, .r = rules) {
-  .r |> 
-    filter(pattern == .pat) |> 
-    pull("result")
+
+set_up_pots(n)
+
+run_step <- function(.v) {
+  
+  slider::slide_vec(.x = .v, 
+                    .f = ~ str_c(.x, collapse = ""),
+                    .before = 2L, 
+                    .after = 2L, 
+                    .step = 1L) |> 
+    tibble(pat = _) |> 
+    left_join(x = _, 
+              y = rules, 
+              by = c("pat" = "pattern"), 
+              na_matches = "never") |> 
+    mutate(result = replace_na(result, ".")) |> 
+    pull(result)
+  
+  
+  
 }
 
-run_step <- function(.p = puzone, .rules = rules, ...) {
-  
-  exclude <- c(1:2, (length(.p) - 1):(length(.p)) )
-  
-  .new <- rep(".", length(.p))
-  
-  for (i in seq_along(.p)) {
-    
-    if (i %in% exclude) {
-      
-      next
-      
-    } else {
-      
-      .new[i] <- get_value(.pat = get_pattern(.i = i, .p = .p), 
-                           .r = .rules)
-    }
-  }
-  
-  puzone <<- .new
-}
+puzzle_one <- reduce(.x = 1:n, 
+                     .f = ~ run_step(.v = .x), 
+                     .init = pots) 
 
-reduce(.x = 1:n, 
-       .f = ~ run_step(... = .x), 
-       .init = puzone)
-
-potvals[which(puzone == "#")] |> sum()
+potvals[which(puzzle_one == "#")] |> sum()
 
 ```
 
@@ -170,9 +159,39 @@ After 20 iterations, the sum of the values of the pots that contain a plant is `
 
 
 
-
 ## Puzzle 2
 
+You realize that 20 generations aren't enough. After all, these plants will need to last another 1500 years to even reach your timeline, not to mention your future.
 
-```{r puzzle2}
+*After fifty billion (50000000000) generations, what is the sum of the numbers of all pots which contain a plant?*
+
+
+
+```{r puzzle2 attempt 2}
+n <- 150
+
+set_up_pots(n)
+
+puztwo <- 
+  accumulate(.x = 1:n, 
+             .f = ~ run_step(.v = .x), 
+             .init = pots)
+
+puztwo_sums <- 
+  map(.x = puztwo, 
+      .f = ~ potvals[which(.x == "#")] |> sum()) |> 
+  as.double() 
+
+
+
+puztwo_sums
+diff(puztwo_sums)
+# my input stabilizes to increasing the sum by 80 after about 99 iterations
+
+
+# remove how many steps we've done from the fifty billion we need to and multiply that by 80
+#  then add the sum we reached in our iteration to find the pattern.
+((50000000000 - n) * 80 ) + tail(puztwo_sums, 1)
 ```
+
+This puzzle's answer is `4000000000000` (4,000,000,000,000; 4 trillion)
